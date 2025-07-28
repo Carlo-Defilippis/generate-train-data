@@ -171,7 +171,8 @@ def process_narratives(input_data, output_path, provider="openai", openai_model=
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(output_data, f, indent=4)
             logging.info(f"Entry {idx} written to output.")
-            git_commit_and_push(output_path, message=f"Update narratives.json after entry {idx}")
+            if idx % 10 == 0:  # Commit every 10 entries
+                git_commit_and_push(output_path, message=f"Update narratives.json after entry {idx}")
         except Exception as e:
             logging.error(f"Failed to write output after entry {idx}: {e}")
 
@@ -205,4 +206,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python generate-narratives.py -i contact_reasons.json -o narratives.json -p ollama --ollama-model deepseek-r1:32b
+# python gen-prompts-and-narratives.py -i contact_reasons.json -o narratives.json -p ollama --ollama-model deepseek-r1:32b

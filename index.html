@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Police Narrative Trainer</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <style>
+    .edited::after {
+      content: '\2713'; /* checkmark */
+      color: green;
+      margin-left: 8px;
+    }
+    textarea {
+      resize: vertical;
+    }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h4">Editable Police Prompts</h1>
+      <button class="btn btn-primary" onclick="downloadJSON()">Export JSON</button>
+    </div>
+    <div id="prompt-container"></div>
+  </div>
+
+  <script>
+    let data = [];
+
+    async function loadData() {
+      const response = await fetch('narratives.json');
+      data = await response.json();
+      const container = document.getElementById('prompt-container');
+
+      data.forEach((entry, index) => {
+        const card = document.createElement('div');
+        card.className = 'card mb-4';
+
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const userPromptLabel = document.createElement('label');
+        userPromptLabel.className = 'form-label fw-bold';
+        userPromptLabel.textContent = `User Prompt #${index + 1}`;
+
+        const userPromptTextarea = document.createElement('textarea');
+        userPromptTextarea.className = 'form-control mb-3';
+        userPromptTextarea.value = entry['User Prompt'];
+        userPromptTextarea.rows = 3;
+        userPromptTextarea.addEventListener('input', () => {
+          entry['User Prompt'] = userPromptTextarea.value;
+          userPromptLabel.classList.add('edited');
+        });
+
+        const narrativeLabel = document.createElement('label');
+        narrativeLabel.className = 'form-label fw-bold';
+        narrativeLabel.textContent = `Narrative #${index + 1}`;
+
+        const narrativeTextarea = document.createElement('textarea');
+        narrativeTextarea.className = 'form-control';
+        narrativeTextarea.value = entry['Narrative'];
+        narrativeTextarea.rows = 6;
+        narrativeTextarea.addEventListener('input', () => {
+          entry['Narrative'] = narrativeTextarea.value;
+          narrativeLabel.classList.add('edited');
+        });
+
+        body.appendChild(userPromptLabel);
+        body.appendChild(userPromptTextarea);
+        body.appendChild(narrativeLabel);
+        body.appendChild(narrativeTextarea);
+
+        card.appendChild(body);
+        container.appendChild(card);
+      });
+    }
+
+    function downloadJSON() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'exported_narratives.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>

@@ -17,6 +17,9 @@
     textarea {
       resize: vertical;
     }
+    textarea.narrative {
+        height: 333px;
+    }
     #uploadInput {
       display: none;
     }
@@ -73,7 +76,7 @@
         narrativeLabel.textContent = `Narrative #${index + 1}`;
 
         const narrativeTextarea = document.createElement('textarea');
-        narrativeTextarea.className = 'form-control';
+        narrativeTextarea.className = 'form-control narrative';
         narrativeTextarea.value = entry['Narrative'];
         narrativeTextarea.rows = 6;
         narrativeTextarea.addEventListener('input', () => {

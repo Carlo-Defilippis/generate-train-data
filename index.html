@@ -71,6 +71,19 @@
           userPromptLabel.classList.add('edited');
         });
 
+        const thinkingLabel = document.createElement('label');
+        thinkingLabel.className = 'form-label fw-bold';
+        thinkingLabel.textContent = `Thinking... #${index + 1}`;
+
+        const thinkingTextarea = document.createElement('textarea');
+        thinkingTextarea.className = 'form-control thinking';
+        thinkingTextarea.value = entry['Narrative'];
+        thinkingTextarea.rows = 6;
+        thinkingTextarea.addEventListener('input', () => {
+          entry['Thinking'] = thinkingTextarea.value;
+          thinkingLabel.classList.add('edited');
+        });
+
         const narrativeLabel = document.createElement('label');
         narrativeLabel.className = 'form-label fw-bold';
         narrativeLabel.textContent = `Narrative #${index + 1}`;

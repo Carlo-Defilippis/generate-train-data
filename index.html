@@ -77,7 +77,7 @@
 
         const thinkingTextarea = document.createElement('textarea');
         thinkingTextarea.className = 'form-control thinking';
-        thinkingTextarea.value = entry['Narrative'];
+        thinkingTextarea.value = entry['Thinking'];
         thinkingTextarea.rows = 6;
         thinkingTextarea.addEventListener('input', () => {
           entry['Thinking'] = thinkingTextarea.value;

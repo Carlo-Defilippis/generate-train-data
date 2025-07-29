@@ -7,7 +7,8 @@ import argparse
 import re
 import random
 import subprocess
-
+from dotenv import load_dotenv
+load_dotenv()
 # Configure basic logging: prints time, level and message.
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -23,14 +24,15 @@ def load_narratives(input_path):
 
 def call_openai_model(prompt, model_name):
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response['choices'][0]['message']['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logging.error(f"OpenAI API call failed: {e}", exc_info=True)
-        return None
+        raise
+
 
 def call_ollama_model(prompt, model_name):
     try:
@@ -47,6 +49,27 @@ def call_ollama_model(prompt, model_name):
     except Exception as e:
         logging.error(f"Ollama API call failed: {e}", exc_info=True)
         return None
+
+def generate_thinking_process(user_prompt, narrative, provider="openai", openai_model="gpt-4", ollama_model="llama2"):
+    """
+    Generate the 'Thinking' portion that explains how the User Prompt was used to create the Narrative.
+    This should analyze the user prompt and explain the reasoning process for creating the formal report.
+    """
+    prompt = (
+        "# Task"
+        "Generate a detailed step-by-step thinking process that explains how the User Prompt was used to create the AI Response(A complete police report narrative).\n"
+        "DO NOT INCLUDE TITLES in your respose, SUCH AS: 'Certainly! Here is a detailed, step-by-step breakdown of the thinking process that the AI might have used to turn the **User Prompt** (a set of bullet-style police notes) into the complete, formal narrative'"
+        "Refer to yourself as 'I' in the first person.\n"
+        "**User Prompt**:  "
+        f"{user_prompt}\n\n"
+        "**AI Response**:  "
+        f"{narrative}\n\n"
+    )
+    
+    if provider == "openai":
+        return call_openai_model(prompt, openai_model)
+    else:
+        return call_ollama_model(prompt, ollama_model)
 
 def rewrite_narrative(narrative_text, provider="openai", openai_model="gpt-4", ollama_model="llama2"):
     prompt = (
@@ -122,6 +145,9 @@ def generate_field_notes(narrative_text, provider="openai", openai_model="gpt-4"
 
     cleaned_notes = re.sub(r"[*:•→⇒]", "", raw_notes)
     cleaned_notes = re.sub(r"@", "at", cleaned_notes)
+    # Remove '- ' at the start of lines, strip leading/trailing whitespace
+    cleaned_notes = cleaned_notes.strip()
+    cleaned_notes = re.sub(r"(?m)^\s*-\s*", "", cleaned_notes)
 
     return cleaned_notes
 
@@ -134,10 +160,21 @@ def git_commit_and_push(file_path, message="Auto update narratives.json"):
     except subprocess.CalledProcessError as e:
         logging.error(f"Git push failed: {e}")
 
-def process_narratives(input_data, output_path, provider="openai", openai_model="gpt-4", ollama_model="llama2"):
-    output_data = []
+def process_narratives(input_data, output_path, provider="openai", openai_model="gpt-4", ollama_model="llama2", start_from_idx=1):
+
+    if start_from_idx != 1 and os.path.exists(output_path):
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                output_data = json.load(f)
+            logging.info(f"Loaded {len(output_data)} existing entries from '{output_path}' to append to.")
+        except Exception as e:
+            logging.error(f"Failed to load existing output file '{output_path}': {e}")
+            output_data = []
 
     for idx, entry in enumerate(input_data, start=1):
+        if idx < start_from_idx:
+            continue
+
         if isinstance(entry, dict):
             original_text = entry.get("narrative", "") or entry.get("Narrative", "")
         else:
@@ -161,8 +198,12 @@ def process_narratives(input_data, output_path, provider="openai", openai_model=
             logging.warning(f"Entry {idx}: User prompt generation failed, skipping.")
             continue
 
+        logging.info(f"Generating thinking process for entry {idx}...")
+        thinking_process = generate_thinking_process(user_prompt, rewritten_narrative, provider, openai_model, ollama_model)
+        # clean_thinking_process = thinking_process.split("✅ **Final Output Ready**")[0].strip() if thinking_process else "No thinking process generated"
         output_data.append({
             "User Prompt": user_prompt,
+            "Thinking": thinking_process if thinking_process else "No thinking process generated",
             "Narrative": rewritten_narrative
         })
 
@@ -185,6 +226,7 @@ def main():
     parser.add_argument("--provider", "-p", choices=["openai", "ollama"], default="openai")
     parser.add_argument("--openai-model", default="gpt-4")
     parser.add_argument("--ollama-model", default="llama2")
+    parser.add_argument("--start-from-idx", type=int, default=1, help="Start processing from this 1-based index in the input file.")
     args = parser.parse_args()
 
     if args.provider == "openai":
@@ -200,10 +242,10 @@ def main():
         output_path=args.output,
         provider=args.provider,
         openai_model=args.openai_model,
-        ollama_model=args.ollama_model
+        ollama_model=args.ollama_model,
+        start_from_idx=args.start_from_idx
     )
 
 if __name__ == "__main__":
     main()
-
 # python gen-prompts-and-narratives.py -i contact_reasons.json -o narratives.json -p ollama --ollama-model deepseek-r1:32b

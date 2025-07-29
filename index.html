@@ -17,6 +17,9 @@
     textarea.narrative {
       height: 333px;
     }
+    text.user-prompt {
+      height: 250px;
+    }
     #uploadInput {
       display: none;
     }
@@ -78,7 +81,7 @@
         userPromptLabel.textContent = `User Prompt #${realIndex + 1}`;
 
         const userPromptTextarea = document.createElement('textarea');
-        userPromptTextarea.className = 'form-control mb-3';
+        userPromptTextarea.className = 'form-control mb-3 user-prompt';
         userPromptTextarea.value = entry['User Prompt'];
         userPromptTextarea.rows = 3;
         userPromptTextarea.addEventListener('input', () => {
